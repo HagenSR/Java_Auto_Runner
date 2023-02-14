@@ -4,8 +4,9 @@ import zipfile
 import shutil
 import os.path,subprocess
 from subprocess import STDOUT,PIPE
-import asyncio
-from asyncio.exceptions import TimeoutError
+from multiprocessing import Process
+
+
 
 class zipRunner:
 
@@ -22,9 +23,9 @@ class zipRunner:
             shutil.rmtree(folder)
         os.mkdir(folder)
         
-    async def run(self):
+    def run(self):
         self.unzip()
-        await self.build()
+        self.build()
 
     def unzip(self):
         zips = glob.glob(f"{self.zipDir}/*.zip")
@@ -32,23 +33,29 @@ class zipRunner:
             with zipfile.ZipFile(zip, "r") as zipref:
                 fileName = zip.split("\\")[-1].lower().replace(".zip", "")
                 zipref.extractall(f"{self.buildDir}/{fileName}")
+                
             
-    async def build(self):
+    def build(self):
         dirs = os.listdir(self.buildDir)
         for dir in dirs:
+            print(f"Starting {dir}")
             MAX_TIMEOUT = 20
             fileName = dir.split("\\")[-1].lower()
             try:
-                task = asyncio.create_task(
-                    self.build_internal(dir)
+                proc = Process(
+                    target=self.build_internal, args = [dir]
                 )
-                await asyncio.wait_for(task, timeout=MAX_TIMEOUT)
+                proc.start()
+                proc.join(MAX_TIMEOUT)
+                if proc.is_alive():
+                    raise TimeoutError()
             except TimeoutError:
+                proc.kill()
                 print(f"{fileName}: Did not complete in time")
-                self.write_to_file(fileName, "failed to finish task in time")
+                self.write_to_file(fileName, bytes("failed to finish task in time", "utf-8"))
 
     
-    async def build_internal(self, dir):
+    def build_internal(self, dir):
         try:
             fileName = dir.split("\\")[-1].lower()
             client = "\\".join(self.returnClientFile(dir).split("\\")[0:-1])
@@ -61,8 +68,10 @@ class zipRunner:
         cmd = ['javac', '-d', f'build/{dir}/out/', '-classpath', f'{java_file}/.', f'{java_file}/Client.java']
         proc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         stdout,stderr = proc.communicate()
-        if stderr or stdout:
-            self.write_to_file(fileName, stdout if stdout is not None else stderr)
+        combined = [line for line in stdout.decode("utf-8").split("\n") if "Note:" not in line]
+        combined = "\n".join(combined)
+        if combined or stderr:
+            self.write_to_file(fileName, combined if combined else stderr)
             raise Exception("Failed to compile")
 
     def execute_java(self, fileName):
@@ -81,5 +90,5 @@ class zipRunner:
 
 if __name__ == "__main__":
     run = zipRunner(stdIn=b"100")
-    asyncio.run(run.run())
+    run.run()
 
