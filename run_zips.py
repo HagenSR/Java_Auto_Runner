@@ -52,7 +52,7 @@ class zipRunner:
             except TimeoutError:
                 proc.kill()
                 print(f"{fileName}: Did not complete in time")
-                self.write_to_file(fileName, bytes("failed to finish task in time", "utf-8"))
+                self.write_to_file(fileName, "failed to finish task in time")
 
     
     def build_internal(self, dir):
@@ -81,6 +81,8 @@ class zipRunner:
         self.write_to_file(fileName, stdout if stdout is not None else stderr)
 
     def write_to_file(self, filename, res):
+        if type(res) is str:
+            res = bytes(res, "utf-8")
         with open(f".\\{self.outputDir}\\{filename}.txt", "wb+") as fl:
             fl.write(res)
         
