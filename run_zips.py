@@ -10,13 +10,14 @@ from multiprocessing import Process
 
 class zipRunner:
 
-    def __init__(self, zipDir = ".\\zips", buildDir = ".\\build", outputDir = ".\\out", stdIn = None) -> None:
+    def __init__(self, zipDir = ".\\zips", buildDir = ".\\build", outputDir = ".\\out", stdIn = None, maxTime = 200) -> None:
         self.zipDir = zipDir
         self.buildDir = buildDir
         self.createOrRemove(self.buildDir)
         self.outputDir = outputDir
         self.createOrRemove(self.outputDir)
         self.stdIn = stdIn
+        self.MAX_TIMEOUT = maxTime
 
     def createOrRemove(self, folder):
         if os.path.exists(folder):
@@ -39,14 +40,13 @@ class zipRunner:
         dirs = os.listdir(self.buildDir)
         for dir in dirs:
             print(f"Starting {dir}")
-            MAX_TIMEOUT = 20
             fileName = dir.split("\\")[-1].lower()
             try:
                 proc = Process(
                     target=self.build_internal, args = [dir]
                 )
                 proc.start()
-                proc.join(MAX_TIMEOUT)
+                proc.join(self.MAX_TIMEOUT)
                 if proc.is_alive():
                     raise TimeoutError()
             except TimeoutError:
