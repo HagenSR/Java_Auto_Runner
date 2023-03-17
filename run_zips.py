@@ -18,7 +18,7 @@ class ZipRunner:
         self.create_or_remove(self.output_dir)
         self.MAX_TIMEOUT = max_time
 
-    def create_or_remove(self, folder):
+    def create_or_remove(self, folder: str):
         if os.path.exists(folder):
             shutil.rmtree(folder)
         os.mkdir(folder)
@@ -52,16 +52,16 @@ class ZipRunner:
                 print(f"{file_name}: Did not complete in time")
                 self.write_to_file(file_name, "failed to finish task in time")
 
-    def build_internal(self, dir):
+    def build_internal(self, dir: str):
         try:
             src_dir, client_file, package = self.get_build_info(dir)
             self.compile_java(dir, src_dir, client_file)
-            self.execute_java(dir, package)
+            self.execute_java(dir, src_dir, package)
         except Exception as e:
             print(f"{dir}: {str(e)}")
             self.write_to_file(dir, str(e))
 
-    def compile_java(self, dir, src_dir, java_file):
+    def compile_java(self, dir: str, src_dir: str, java_file: str):
         cmd = " ".join(['javac', '-d', f'build/{dir}/out/',
                         '-classpath', f'{src_dir}/.', f'{java_file}'])
         proc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
@@ -73,22 +73,22 @@ class ZipRunner:
             self.write_to_file(dir, combined if combined else stderr)
             raise Exception("Failed to compile")
 
-    def execute_java(self, fileName, package):
+    def execute_java(self, fileName: str, src_dir: str, package: str):
         cmd = " ".join(
-            ['java', '-cp', f'.\\build\\{fileName}\\out\\.', f'{package}'])
+            ['java', '-cp', f'..\\out\\.', f'{package}'])
         st = open("input.in")
         proc = subprocess.Popen(
-            cmd, stdin=st, stdout=PIPE, stderr=STDOUT, shell=False)
+            cmd, stdin=st, stdout=PIPE, stderr=STDOUT, shell=False, cwd=f'{src_dir}\\..')
         stdout, stderr = proc.communicate()
         self.write_to_file(fileName, stdout if stdout is not None else stderr)
 
-    def write_to_file(self, filename, res):
+    def write_to_file(self, filename: str, res):
         if type(res) is str:
             res = bytes(res, "utf-8")
         with open(f".\\{self.output_dir}\\{filename}.txt", "ab+") as fl:
             fl.write(res)
 
-    def get_build_info(self, dir):
+    def get_build_info(self, dir: str):
         parts = []
         file, contents = self.find_client_file(dir)
         jv_class = "Client"
@@ -109,8 +109,7 @@ class ZipRunner:
         else:
             return "\\".join(parts), file, package + f".{jv_class}"
 
-
-    def find_client_file(self, dir):
+    def find_client_file(self, dir: str):
         files = [os.path.join(dp, f) for dp, dn, fn in os.walk(
             os.path.expanduser(f"./build/{dir}")) for f in fn]
         for file in files:
