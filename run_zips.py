@@ -99,10 +99,10 @@ class ZipRunner:
         package = ""
         for line in contents.split("\n"):
             if "public class " in line:
-                jv_class = line.removeprefix(
+                jv_class = line.strip().removeprefix(
                     "public class").removesuffix("{").strip()
             if "package" in line:
-                package = line.removeprefix(
+                package = line.strip().removeprefix(
                     "package").removesuffix(";").strip()
         if package == "":
             return "\\".join(parts), file, jv_class
@@ -113,6 +113,8 @@ class ZipRunner:
         files = [os.path.join(dp, f) for dp, dn, fn in os.walk(
             os.path.expanduser(f"./build/{dir}")) for f in fn]
         for file in files:
+            if not file.lower().endswith(".java"):
+                continue
             contents = ""
             with open(file) as fl:
                 contents = fl.read()
