@@ -30,9 +30,12 @@ class ZipRunner:
     def unzip(self):
         zips = glob.glob(f"{self.zip_dir}/*.zip")
         for zip in zips:
-            with zipfile.ZipFile(zip, "r") as zip_ref:
-                file_name = zip.split("\\")[-1].lower().replace(".zip", "")
-                zip_ref.extractall(f"{self.build_dir}/{file_name}")
+            try:
+                with zipfile.ZipFile(zip, "r") as zip_ref:
+                    file_name = zip.split("\\")[-1].lower().replace(".zip", "")
+                    zip_ref.extractall(f"{self.build_dir}/{file_name}")
+            except Exception as e:
+                print(f"Failed to extract {zip}")
 
     def build(self):
         dirs = os.listdir(self.build_dir)
